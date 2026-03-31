@@ -545,9 +545,9 @@ dependencies = [
 
 [[package]]
 name = "awssdk-instrumentation"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ec517ddaafcdf89797195b1f16f427d4f98c6c78da0512743ce34ea92039e54"
+checksum = "9629ee62b836874ff42de3280c62df5531ca57ee88c44a1300fb804d0cba4abf"
 dependencies = [
  "aws-sdk-dynamodb",
  "aws-smithy-runtime-api",
