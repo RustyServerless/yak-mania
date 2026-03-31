@@ -1,0 +1,40 @@
+[
+  {
+    "arguments": {},
+    "identity": null,
+    "source": null,
+    "request": null,
+    "prev": null,
+    "info": {
+      "fieldName": "gameState",
+      "selectionSetList": [
+        "game_status",
+        "job_fees",
+        "job_fees/breeder",
+        "job_fees/driver",
+        "job_fees/shearer",
+        "players",
+        "players/balance",
+        "players/id",
+        "players/name",
+        "players/assignment",
+        "players/assignment/job",
+        "players/yak_bred",
+        "players/yak_driven",
+        "players/yak_sheared",
+        "yak_counts",
+        "yak_counts/in_nursery",
+        "yak_counts/with_breeders",
+        "yak_counts/in_warehouse",
+        "yak_counts/with_drivers",
+        "yak_counts/in_shearingshed",
+        "yak_counts/with_shearers",
+        "yak_counts/total_sheared"
+      ],
+      "selectionSetGraphQL": "{\n  game_status\n  job_fees {\n    breeder\n    driver\n    shearer\n  }\n  players {\n    balance\n    id\n    name\n    assignment {\n      job\n    }\n    yak_bred\n    yak_driven\n    yak_sheared\n  }\n  yak_counts {\n    in_nursery\n    with_breeders\n    in_warehouse\n    with_drivers\n    in_shearingshed\n    with_shearers\n    total_sheared\n  }\n}",
+      "variables": {},
+      "parentTypeName": "Query"
+    },
+    "stash": {}
+  }
+]

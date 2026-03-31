@@ -1,0 +1,28 @@
+[
+  {
+    "arguments": {
+      "name": "#PLAYER_NAME#",
+      "secret": "#PLAYER_SECRET#"
+    },
+    "identity": null,
+    "source": null,
+    "request": null,
+    "prev": null,
+    "info": {
+      "fieldName": "registerNewPlayer",
+      "selectionSetList": [
+        "player",
+        "player/balance",
+        "player/id",
+        "player/name",
+        "player/yak_bred",
+        "player/yak_driven",
+        "player/yak_sheared"
+      ],
+      "selectionSetGraphQL": "{\n  player {\n    balance\n    id\n    name\n    yak_bred\n    yak_driven\n    yak_sheared\n  }\n}",
+      "variables": {},
+      "parentTypeName": "Mutation"
+    },
+    "stash": {}
+  }
+]

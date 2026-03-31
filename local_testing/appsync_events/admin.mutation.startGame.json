@@ -1,0 +1,19 @@
+[
+  {
+    "arguments": {},
+    "identity": null,
+    "source": null,
+    "request": null,
+    "prev": null,
+    "info": {
+      "fieldName": "startGame",
+      "selectionSetList": [
+        "game_status"
+      ],
+      "selectionSetGraphQL": "{\n  game_status\n}",
+      "variables": {},
+      "parentTypeName": "Mutation"
+    },
+    "stash": {}
+  }
+]

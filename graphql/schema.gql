@@ -1,0 +1,161 @@
+# Root schema definition specifying available operations
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+# Queries that can be performed to retrieve data
+type Query {
+  # Get current game state
+  gameState: GameState!
+    @aws_cognito_user_pools(cognito_groups: ["Admins"])
+    @aws_api_key
+}
+
+# Mutations to modify game state and player data
+type Mutation {
+  # Start a new game round
+  startGame: GameUpdate! @aws_cognito_user_pools(cognito_groups: ["Admins"])
+  # Stop the current game round
+  stopGame: GameUpdate! @aws_cognito_user_pools(cognito_groups: ["Admins"])
+  # Reset the game state and clear all player statistics
+  resetGame: GameUpdate! @aws_cognito_user_pools(cognito_groups: ["Admins"])
+  # Remove a player from the game
+  removePlayer(player_id: ID!): Player!
+    @aws_cognito_user_pools(cognito_groups: ["Admins"])
+  # Register a new player with name and secret key
+  registerNewPlayer(name: String!, secret: String!): GameUpdate! @aws_api_key
+  # Update an existing player's name
+  updatePlayerName(
+    player_id: ID!
+    secret: String!
+    new_name: String!
+  ): GameUpdate! @aws_api_key
+  # Breeder
+  buyBabyYak(player_id: ID!, secret: String!): GameUpdate! @aws_api_key
+  sellGrownYak(player_id: ID!, secret: String!, yak_id: ID!): GameUpdate!
+    @aws_api_key
+  # Driver
+  buyGrownYak(player_id: ID!, secret: String!): GameUpdate! @aws_api_key
+  sellUnshearedYak(player_id: ID!, secret: String!, yak_id: ID!): GameUpdate!
+    @aws_api_key
+  # Shearer
+  buyUnshearedYak(player_id: ID!, secret: String!): GameUpdate! @aws_api_key
+  sellShearedYak(player_id: ID!, secret: String!, yak_id: ID!): GameUpdate!
+    @aws_api_key
+}
+
+# Subscriptions to receive real-time updates
+type Subscription {
+  # Subscribe to player removals
+  removedPlayer: Player
+    @aws_cognito_user_pools(cognito_groups: ["Admins"])
+    @aws_api_key
+    @aws_subscribe(mutations: ["removePlayer"])
+  gameUpdated: GameUpdate
+    @aws_cognito_user_pools(cognito_groups: ["Admins"])
+    @aws_api_key
+    @aws_subscribe(
+      mutations: [
+        "startGame"
+        "stopGame"
+        "resetGame"
+        "registerNewPlayer"
+        "updatePlayerName"
+        "buyBabyYak"
+        "sellGrownYak"
+        "buyGrownYak"
+        "sellUnshearedYak"
+        "buyUnshearedYak"
+        "sellShearedYak"
+      ]
+    )
+}
+
+# Jobs that players can perform
+enum Job {
+  BREEDER
+  DRIVER
+  SHEARER
+}
+
+type JobFees @aws_cognito_user_pools(cognito_groups: ["Admins"]) @aws_api_key {
+  breeder: Float!
+  driver: Float!
+  shearer: Float!
+}
+
+# Player
+type Player @aws_cognito_user_pools(cognito_groups: ["Admins"]) @aws_api_key {
+  id: ID!
+  name: String!
+  assignment: PlayerAssignment
+  balance: Float!
+  yak_bred: Int!
+  yak_driven: Int!
+  yak_sheared: Int!
+}
+
+# Player
+type PlayerAssignment
+  @aws_cognito_user_pools(cognito_groups: ["Admins"])
+  @aws_api_key {
+  job: Job!
+  yak: Yak!
+  fee: Float!
+}
+
+# Yak type
+type Yak @aws_cognito_user_pools(cognito_groups: ["Admins"]) @aws_api_key {
+  id: ID!
+}
+
+enum WaitingPlace {
+  WAREHOUSE
+  SHEARING_SHED
+}
+
+type YakCounts
+  @aws_cognito_user_pools(cognito_groups: ["Admins"])
+  @aws_api_key {
+  in_nursery: Int!
+  with_breeders: Int!
+  in_warehouse: Int!
+  with_drivers: Int!
+  in_shearingshed: Int!
+  with_shearers: Int!
+  total_sheared: Int!
+}
+
+# Game status enum
+enum GameStatus {
+  RESET
+  STARTED
+  STOPPED
+}
+
+# Game state
+type GameState
+  @aws_cognito_user_pools(cognito_groups: ["Admins"])
+  @aws_api_key {
+  game_status: GameStatus!
+  players: [Player!]!
+  yak_counts: YakCounts!
+  job_fees: JobFees!
+}
+
+type GameUpdate
+  @aws_cognito_user_pools(cognito_groups: ["Admins"])
+  @aws_api_key {
+  sampled: Boolean!
+  game_status: GameStatus
+  player: Player
+  yak_counts: YakCounts
+  job_fees: JobFees
+}
+
+# GameStateUpdate
+# input GameStateUpdate {
+#   id: ID!
+# }

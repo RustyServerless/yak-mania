@@ -1,0 +1,45 @@
+[
+  {
+    "arguments": {
+      "player_id": "#PLAYER_ID#",
+      "secret": "#PLAYER_SECRET#"
+    },
+    "identity": null,
+    "source": null,
+    "request": null,
+    "prev": null,
+    "info": {
+      "fieldName": "buyUnshearedYak",
+      "selectionSetList": [
+        "player",
+        "player/id",
+        "player/name",
+        "player/assignment",
+        "player/assignment/job",
+        "player/assignment/yak",
+        "player/assignment/yak/id",
+        "player/assignment/fee",
+        "player/balance",
+        "player/yak_bred",
+        "player/yak_driven",
+        "player/yak_sheared",
+        "yak_counts",
+        "yak_counts/in_nursery",
+        "yak_counts/with_breeders",
+        "yak_counts/in_warehouse",
+        "yak_counts/with_drivers",
+        "yak_counts/in_shearingshed",
+        "yak_counts/with_shearers",
+        "yak_counts/total_sheared",
+        "job_fees",
+        "job_fees/breeder",
+        "job_fees/driver",
+        "job_fees/shearer"
+      ],
+      "selectionSetGraphQL": "{\n  player {\n    id\n    name\n    assignment {\n      job\n      yak {\n        id\n      }\n      fee\n    }\n    balance\n    yak_bred\n    yak_driven\n    yak_sheared\n  }\n  yak_counts {\n    in_nursery\n    with_breeders\n    in_warehouse\n    with_drivers\n    in_shearingshed\n    with_shearers\n    total_sheared\n  }\n  job_fees {\n    breeder\n    driver\n    shearer\n  }\n}",
+      "variables": {},
+      "parentTypeName": "Mutation"
+    },
+    "stash": {}
+  }
+]

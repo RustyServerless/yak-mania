@@ -1,0 +1,19 @@
+[package]
+name = "instrumentation-demo"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+awssdk-instrumentation = { workspace = true }
+
+aws-config = { workspace = true }
+aws-sdk-dynamodb = { workspace = true }
+
+tokio = { workspace = true }
+aws_lambda_events = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }

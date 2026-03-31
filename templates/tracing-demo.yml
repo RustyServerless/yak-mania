@@ -1,0 +1,535 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform:
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
+Description: Tracing demo - comparing X-Ray instrumentation approaches across Python and Rust Lambdas
+
+Parameters:
+  ProjectName:
+    Type: String
+
+# Default properties for all Lambdas in this template.
+# Tracing: Active enables X-Ray for all functions.
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 128
+    Architectures:
+      - arm64
+    Tracing: Active
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref DemoTable
+
+# Region-to-layer-ARN mapping for the new ADOT (AWS Distro for OpenTelemetry) v2 Lambda layer.
+# Each region has its own published layer ARN since Lambda layers are region-specific.
+Mappings:
+  AdotNewLayer:
+    af-south-1:
+      Arn: arn:aws:lambda:af-south-1:904233096616:layer:AWSOpenTelemetryDistroPython:18
+    ap-east-1:
+      Arn: arn:aws:lambda:ap-east-1:888577020596:layer:AWSOpenTelemetryDistroPython:18
+    ap-northeast-1:
+      Arn: arn:aws:lambda:ap-northeast-1:615299751070:layer:AWSOpenTelemetryDistroPython:21
+    ap-northeast-2:
+      Arn: arn:aws:lambda:ap-northeast-2:615299751070:layer:AWSOpenTelemetryDistroPython:21
+    ap-northeast-3:
+      Arn: arn:aws:lambda:ap-northeast-3:615299751070:layer:AWSOpenTelemetryDistroPython:20
+    ap-south-1:
+      Arn: arn:aws:lambda:ap-south-1:615299751070:layer:AWSOpenTelemetryDistroPython:21
+    ap-south-2:
+      Arn: arn:aws:lambda:ap-south-2:796973505492:layer:AWSOpenTelemetryDistroPython:18
+    ap-southeast-1:
+      Arn: arn:aws:lambda:ap-southeast-1:615299751070:layer:AWSOpenTelemetryDistroPython:20
+    ap-southeast-2:
+      Arn: arn:aws:lambda:ap-southeast-2:615299751070:layer:AWSOpenTelemetryDistroPython:21
+    ap-southeast-3:
+      Arn: arn:aws:lambda:ap-southeast-3:039612877180:layer:AWSOpenTelemetryDistroPython:18
+    ap-southeast-4:
+      Arn: arn:aws:lambda:ap-southeast-4:713881805771:layer:AWSOpenTelemetryDistroPython:18
+    ap-southeast-5:
+      Arn: arn:aws:lambda:ap-southeast-5:152034782359:layer:AWSOpenTelemetryDistroPython:9
+    ap-southeast-7:
+      Arn: arn:aws:lambda:ap-southeast-7:980416031188:layer:AWSOpenTelemetryDistroPython:9
+    ca-central-1:
+      Arn: arn:aws:lambda:ca-central-1:615299751070:layer:AWSOpenTelemetryDistroPython:21
+    ca-west-1:
+      Arn: arn:aws:lambda:ca-west-1:595944127152:layer:AWSOpenTelemetryDistroPython:9
+    eu-central-1:
+      Arn: arn:aws:lambda:eu-central-1:615299751070:layer:AWSOpenTelemetryDistroPython:21
+    eu-central-2:
+      Arn: arn:aws:lambda:eu-central-2:156041407956:layer:AWSOpenTelemetryDistroPython:18
+    eu-north-1:
+      Arn: arn:aws:lambda:eu-north-1:615299751070:layer:AWSOpenTelemetryDistroPython:21
+    eu-south-1:
+      Arn: arn:aws:lambda:eu-south-1:257394471194:layer:AWSOpenTelemetryDistroPython:18
+    eu-south-2:
+      Arn: arn:aws:lambda:eu-south-2:490004653786:layer:AWSOpenTelemetryDistroPython:18
+    eu-west-1:
+      Arn: arn:aws:lambda:eu-west-1:615299751070:layer:AWSOpenTelemetryDistroPython:21
+    eu-west-2:
+      Arn: arn:aws:lambda:eu-west-2:615299751070:layer:AWSOpenTelemetryDistroPython:21
+    eu-west-3:
+      Arn: arn:aws:lambda:eu-west-3:615299751070:layer:AWSOpenTelemetryDistroPython:21
+    il-central-1:
+      Arn: arn:aws:lambda:il-central-1:746669239226:layer:AWSOpenTelemetryDistroPython:18
+    me-central-1:
+      Arn: arn:aws:lambda:me-central-1:739275441131:layer:AWSOpenTelemetryDistroPython:18
+    me-south-1:
+      Arn: arn:aws:lambda:me-south-1:980921751758:layer:AWSOpenTelemetryDistroPython:18
+    mx-central-1:
+      Arn: arn:aws:lambda:mx-central-1:610118373846:layer:AWSOpenTelemetryDistroPython:9
+    sa-east-1:
+      Arn: arn:aws:lambda:sa-east-1:615299751070:layer:AWSOpenTelemetryDistroPython:21
+    us-east-1:
+      Arn: arn:aws:lambda:us-east-1:615299751070:layer:AWSOpenTelemetryDistroPython:24
+    us-east-2:
+      Arn: arn:aws:lambda:us-east-2:615299751070:layer:AWSOpenTelemetryDistroPython:21
+    us-west-1:
+      Arn: arn:aws:lambda:us-west-1:615299751070:layer:AWSOpenTelemetryDistroPython:28
+    us-west-2:
+      Arn: arn:aws:lambda:us-west-2:615299751070:layer:AWSOpenTelemetryDistroPython:28
+
+Resources:
+  ###########
+  # Storage #
+  ###########
+  DemoTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${ProjectName}-tracing-demo
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+
+  #############
+  # SNS Topic #
+  #############
+  # SNS topic as the fan-out entry point: one publish triggers all 6 Lambda paths.
+  DemoTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${ProjectName}-tracing-demo
+      # TracingConfig: Active enables X-Ray trace propagation through SNS.
+      # Trace context is passed from the publisher to all subscribers.
+      TracingConfig: Active
+
+  # X-Ray resource policy allowing SNS to send trace segments.
+  # Fn::ToJsonString (from AWS::LanguageExtensions) converts the YAML policy to JSON (X-Ray API requires JSON).
+  DemoTopicXRayResourcePolicy:
+    Type: AWS::XRay::ResourcePolicy
+    Properties:
+      PolicyName: !Sub ${ProjectName}-sns-active-tracing
+      PolicyDocument:
+        Fn::ToJsonString:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: sns.amazonaws.com
+              Action:
+                - xray:PutTraceSegments
+                - xray:GetSamplingRules
+                - xray:GetSamplingTargets
+              Resource: "*"
+              Condition:
+                ArnEquals:
+                  aws:SourceArn: !Ref DemoTopic
+                StringEquals:
+                  aws:SourceAccount: !Ref AWS::AccountId
+
+  DemoTopicXRaySamplingRule:
+    Type: AWS::XRay::SamplingRule
+    Properties:
+      SamplingRule:
+        RuleName: !Sub ${ProjectName}-sns
+        Version: 1
+        ResourceARN: !Ref DemoTopic
+        ServiceName: "*"
+        ServiceType: AWS::SNS::Topic
+        Priority: 10
+        ReservoirSize: 200
+        FixedRate: 1
+        HTTPMethod: "*"
+        Host: "*"
+        URLPath: "*"
+
+  ##############
+  # SQS Queues #
+  ##############
+  # Each Lambda gets its own SQS queue subscribed to the same SNS topic.
+  # QueuePolicy allows SNS to send messages. RawMessageDelivery: false wraps
+  # the SNS message in an SQS envelope (needed for trace context propagation).
+  PythonNoInstrumentQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${ProjectName}-tracing-demo-python-no-instrument
+  PythonNoInstrumentQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref PythonNoInstrumentQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt PythonNoInstrumentQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref DemoTopic
+  PythonNoInstrumentSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref DemoTopic
+      Protocol: sqs
+      Endpoint: !GetAtt PythonNoInstrumentQueue.Arn
+      RawMessageDelivery: false
+
+  PythonXRaySDKQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${ProjectName}-tracing-demo-python-xray-sdk
+  PythonXRaySDKQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref PythonXRaySDKQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt PythonXRaySDKQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref DemoTopic
+  PythonXRaySDKSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref DemoTopic
+      Protocol: sqs
+      Endpoint: !GetAtt PythonXRaySDKQueue.Arn
+      RawMessageDelivery: false
+
+  PythonAdotV1Queue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${ProjectName}-tracing-demo-python-adot-v1
+  PythonAdotV1QueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref PythonAdotV1Queue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt PythonAdotV1Queue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref DemoTopic
+  PythonAdotV1Subscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref DemoTopic
+      Protocol: sqs
+      Endpoint: !GetAtt PythonAdotV1Queue.Arn
+      RawMessageDelivery: false
+
+  PythonAdotV2Queue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${ProjectName}-tracing-demo-python-adot-v2
+  PythonAdotV2QueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref PythonAdotV2Queue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt PythonAdotV2Queue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref DemoTopic
+  PythonAdotV2Subscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref DemoTopic
+      Protocol: sqs
+      Endpoint: !GetAtt PythonAdotV2Queue.Arn
+      RawMessageDelivery: false
+
+  RustNoInstrumentQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${ProjectName}-tracing-demo-rust-no-instrument
+  RustNoInstrumentQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref RustNoInstrumentQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt RustNoInstrumentQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref DemoTopic
+  RustNoInstrumentSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref DemoTopic
+      Protocol: sqs
+      Endpoint: !GetAtt RustNoInstrumentQueue.Arn
+      RawMessageDelivery: false
+
+  RustInstrumentQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${ProjectName}-tracing-demo-rust-instrument
+  RustInstrumentQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref RustInstrumentQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt RustInstrumentQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref DemoTopic
+  RustInstrumentSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref DemoTopic
+      Protocol: sqs
+      Endpoint: !GetAtt RustInstrumentQueue.Arn
+      RawMessageDelivery: false
+
+  ####################
+  # Lambda Functions #
+  ####################
+
+  # Path 0: Python, no instrumentation
+  PythonNoInstrumentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-tracing-demo-python-no-instrument
+      Runtime: python3.13
+      Handler: index.handler
+      CodeUri: ../python/lambdas/no-instrumentation-demo
+      Environment:
+        Variables:
+          LAMBDA_NAME: python-no-instrument
+      Events:
+        SqsTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt PythonNoInstrumentQueue.Arn
+            BatchSize: 1
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: dynamodb:PutItem
+              Resource: !GetAtt DemoTable.Arn
+  PythonNoInstrumentFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${PythonNoInstrumentFunction}
+      RetentionInDays: 90
+
+  # Path 1: X-Ray SDK + X-Ray daemon
+  PythonXRaySDKFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-tracing-demo-python-xray-sdk
+      Runtime: python3.13
+      Handler: index.handler
+      CodeUri: ../python/lambdas/xray-sdk-demo
+      Environment:
+        Variables:
+          LAMBDA_NAME: python-xray-sdk
+      Events:
+        SqsTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt PythonXRaySDKQueue.Arn
+            BatchSize: 1
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: dynamodb:PutItem
+              Resource: !GetAtt DemoTable.Arn
+  PythonXRaySDKFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${PythonXRaySDKFunction}
+      RetentionInDays: 90
+
+  # Path 2: OTel Instrumentation + OTel collector / X-Ray exporter (legacy ADOT)
+  PythonAdotV1Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-tracing-demo-python-adot-v1
+      Runtime: python3.13
+      Handler: index.handler
+      CodeUri: ../python/lambdas/adot-demo
+      # AWS-published ADOT v1 layer ARN. 901920570463 is the official AWS Lambda Layers publisher account.
+      # The layer includes the OTel collector sidecar.
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:901920570463:layer:aws-otel-python-arm64-ver-1-32-0:2
+      Environment:
+        Variables:
+          LAMBDA_NAME: python-adot-v1
+          # This env var tells the Lambda runtime to run /opt/otel-instrument (from the ADOT layer)
+          # BEFORE the handler — it auto-instruments Python libraries.
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/otel-instrument
+      Events:
+        SqsTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt PythonAdotV1Queue.Arn
+            BatchSize: 1
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: dynamodb:PutItem
+              Resource: !GetAtt DemoTable.Arn
+  PythonAdotV1FunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${PythonAdotV1Function}
+      RetentionInDays: 90
+
+  # Path 3: OTel Instrumentation + in-code X-Ray segment translation + X-Ray daemon (new ADOT)
+  PythonAdotV2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-tracing-demo-python-adot-v2
+      Runtime: python3.13
+      Handler: index.handler
+      CodeUri: ../python/lambdas/adot-demo
+      # Looks up the region-specific ADOT v2 layer ARN from the Mappings section
+      Layers:
+        - !FindInMap [AdotNewLayer, !Ref "AWS::Region", Arn]
+      Environment:
+        Variables:
+          LAMBDA_NAME: python-adot-v2
+          AWS_LAMBDA_EXEC_WRAPPER: /opt/otel-instrument
+          # Disable CloudWatch Application Signals (a separate observability feature)
+          # to isolate the X-Ray tracing comparison
+          OTEL_AWS_APPLICATION_SIGNALS_ENABLED: "false"
+      Events:
+        SqsTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt PythonAdotV2Queue.Arn
+            BatchSize: 1
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: dynamodb:PutItem
+              Resource: !GetAtt DemoTable.Arn
+  PythonAdotV2FunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${PythonAdotV2Function}
+      RetentionInDays: 90
+
+  # Path 4: Rust, no instrumentation — baseline comparison
+  RustNoInstrumentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-tracing-demo-rust-no-instrument
+      # provided.al2023: custom runtime for compiled languages (Rust, Go, C++).
+      # The Lambda service executes a `bootstrap` binary rather than a managed language runtime.
+      Runtime: provided.al2023
+      Handler: rust.handler
+      CodeUri: ../rust/lambdas/no-instrumentation-demo
+      Environment:
+        Variables:
+          LAMBDA_NAME: rust-no-instrument
+          # RUST_LOG configures the `tracing` crate's env filter
+          RUST_LOG: info
+      Events:
+        SqsTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt RustNoInstrumentQueue.Arn
+            BatchSize: 1
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: dynamodb:PutItem
+              Resource: !GetAtt DemoTable.Arn
+  RustNoInstrumentFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${RustNoInstrumentFunction}
+      RetentionInDays: 90
+
+  # Path 5: Rust with the `awssdk-instrumentation` crate — OTel + X-Ray tracing for Rust.
+  # Compare this with Path 4 to see what instrumentation adds (both in traces and in cold start overhead).
+  RustInstrumentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-tracing-demo-rust-instrument
+      Runtime: provided.al2023
+      Handler: rust.handler
+      CodeUri: ../rust/lambdas/instrumentation-demo
+      Environment:
+        Variables:
+          LAMBDA_NAME: rust-instrument
+          # Enable debug logging for awssdk-instrumentation to see its internal OTel operations
+          RUST_LOG: info,awssdk_instrumentation=debug
+      Events:
+        SqsTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt RustInstrumentQueue.Arn
+            BatchSize: 1
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: dynamodb:PutItem
+              Resource: !GetAtt DemoTable.Arn
+  RustInstrumentFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${RustInstrumentFunction}
+      RetentionInDays: 90
+
+Outputs:
+  TopicArn:
+    Description: The ARN of the SNS Topic used to trigger the 6 lambdas
+    Value: !Ref DemoTopic

@@ -1,0 +1,26 @@
+[package]
+name = "appsync-source"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+lambda-appsync = { workspace = true }
+awssdk-instrumentation = { workspace = true }
+dynamodb-facade = { workspace = true }
+
+aws-config = { workspace = true }
+aws-sdk-dynamodb = { workspace = true }
+
+tokio = { workspace = true}
+aws_lambda_events = { workspace = true}
+
+serde = { workspace = true }
+serde_dynamo = { workspace = true }
+
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+rand = { workspace = true }

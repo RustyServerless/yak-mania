@@ -1,0 +1,25 @@
+[
+  {
+    "arguments": {
+      "player_id": "#PLAYER_ID#",
+      "secret": "#PLAYER_SECRET#",
+      "new_name": "#NEW_NAME#"
+    },
+    "identity": null,
+    "source": null,
+    "request": null,
+    "prev": null,
+    "info": {
+      "fieldName": "updatePlayerName",
+      "selectionSetList": [
+        "player",
+        "player/id",
+        "player/name"
+      ],
+      "selectionSetGraphQL": "{\n  player {\n    id\n    name\n  }\n}",
+      "variables": {},
+      "parentTypeName": "Mutation"
+    },
+    "stash": {}
+  }
+]

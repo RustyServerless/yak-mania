@@ -1,0 +1,28 @@
+[
+  {
+    "arguments": {
+      "player_id": "#PLAYER_ID#"
+    },
+    "identity": null,
+    "source": null,
+    "request": null,
+    "prev": null,
+    "info": {
+      "fieldName": "removePlayer",
+      "selectionSetList": [
+        "balance",
+        "id",
+        "name",
+        "assignment",
+        "assignment/job",
+        "yak_bred",
+        "yak_driven",
+        "yak_sheared"
+      ],
+      "selectionSetGraphQL": "{\n  balance\n  id\n  name\n  assignment {\n    job\n  }\n  yak_bred\n  yak_driven\n  yak_sheared\n}",
+      "variables": {},
+      "parentTypeName": "Mutation"
+    },
+    "stash": {}
+  }
+]
