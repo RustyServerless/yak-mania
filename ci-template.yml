@@ -556,9 +556,11 @@ Resources:
               - Sid: Lambda
                 Effect: Allow
                 Action: lambda:*
-                Resource:
-                  - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ProjectName}-*
-                  - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:event-source-mapping:*
+                Resource: !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ProjectName}-*
+              - Sid: LambdaESM
+                Effect: Allow
+                Action: lambda:*EventSourceMapping*
+                Resource: "*"
               # Allows attaching AWS-provided ADOT (OpenTelemetry) Lambda layers.
               # 901920570463 is AWS's official layer publisher account.
               - Sid: LambdaLayers
