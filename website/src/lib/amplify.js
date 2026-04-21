@@ -10,7 +10,7 @@ const authConfig = {
 			oauth: {
 				domain: import.meta.env.VITE_COGNITO_DOMAIN,
 				scopes: ['openid', 'email', 'profile'],
-				redirectSignIn: [import.meta.env.VITE_WEBSITE_URL],
+				redirectSignIn: [import.meta.env.VITE_WEBSITE_URL + 'admin'],
 				redirectSignOut: [import.meta.env.VITE_WEBSITE_URL],
 				responseType: 'code'
 			}

@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: 2010-09-09
 # SAM (Serverless Application Model) transform enables shorthand syntax
 # like AWS::Serverless::Function that CloudFormation expands into full resource definitions.
 Transform: AWS::Serverless-2016-10-31
-Description: CodePipeline pipeline for the demo
+Description: CICD for the Yak Mania X-Ray/Rust Lambda demo
 
 Parameters:
   ProjectName:

@@ -1,14 +1,17 @@
-use aws_sdk_dynamodb::{Client, Error};
+use aws_sdk_dynamodb::Client;
 use dynamodb_facade::{
-    AttributeValue, Condition, DefaultMonoTable, DynamoDBItemOp, IntoAttributeValue, Item, ItemId,
-    NoId,
+    AttributeValue, Condition, DynamoDBItem, DynamoDBItemOp, Error, IntoAttributeValue, Item,
+    attr_list, has_attributes,
 };
+
+use crate::dynamodb_table::{ItemType, MonoTable, PK, SK};
 
 use super::GameStatus;
 
 /// Represents the game status in DynamoDB
 /// Contains constants and implementations for DynamoDB storage
 impl GameStatus {
+    pub const TYPE: &'static str = "GAME_STATUS";
     /// Name of attribute storing the actual game status value
     const PROPERTY_NAME: &'static str = "game_status";
 
@@ -36,43 +39,42 @@ impl GameStatus {
                 Condition::eq(Self::PROPERTY_NAME, GameStatus::Started.to_string())
             }
         };
-        self.put(client)
-            .condition(expected_value_condition)
-            .send()
-            .await?;
+        self.put(client).condition(expected_value_condition).await?;
         Ok(self)
     }
 }
 
 // DynamoDBItem trait implementation: tells dynamodb-facade how to store/retrieve this type.
 // GameStatus is a singleton item (NoId for both PK and SK), using TYPE as both PK and SK value.
-impl<'a> dynamodb_facade::DynamoDBItem<'a> for GameStatus {
-    type PkId = NoId;
-    type SkId = NoId;
-    type TableDefinition = DefaultMonoTable;
-    const TYPE: &'static str = "GAME_STATUS";
-
-    fn get_pk_from_id(_id: Self::PkId) -> dynamodb_facade::AttributeValue {
-        Self::TYPE.into_attribute_value()
+impl DynamoDBItem<MonoTable> for GameStatus {
+    type AdditionalAttributes = attr_list!(ItemType);
+    fn to_item(&self) -> dynamodb_facade::Item<MonoTable> {
+        let minimal_item = dynamodb_facade::Item::minimal_from(self);
+        minimal_item.with_attributes([(Self::PROPERTY_NAME.to_owned(), self.to_attribute_value())])
     }
 
-    fn get_sk_from_id(_id: Self::SkId) -> dynamodb_facade::AttributeValue {
-        Self::TYPE.into_attribute_value()
-    }
-
-    fn get_key(&self) -> dynamodb_facade::Item {
-        Self::get_key_from_id(ItemId::NONE)
-    }
-
-    fn to_item(&self) -> Item {
-        let mut item = self.to_item_core();
-        item.insert(Self::PROPERTY_NAME.to_owned(), self.to_attribute_value());
-        item
-    }
-
-    fn from_item(item: Item) -> Self {
+    fn try_from_item(item: Item<MonoTable>) -> Result<Self, Error> {
         item.get(Self::PROPERTY_NAME)
-            .and_then(|a| a.as_s().expect("valid schema").parse().ok())
-            .expect("valid schema")
+            .ok_or_else(|| Error::custom("Invalid Schema"))
+            .and_then(|a| {
+                a.as_s()
+                    .map_err(|e| Error::custom(format!("Invalid Schema: {e:?}")))
+            })
+            .and_then(|s| s.parse().map_err(Error::other))
+    }
+}
+has_attributes! {
+    GameStatus {
+        PK {
+            const VALUE: &'static str = GameStatus::TYPE;
+        }
+
+        SK {
+            const VALUE: &'static str = GameStatus::TYPE;
+        }
+
+        ItemType {
+            const VALUE: &'static str = GameStatus::TYPE;
+        }
     }
 }

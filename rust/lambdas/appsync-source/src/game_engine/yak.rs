@@ -1,10 +1,9 @@
-use dynamodb_facade::{
-    AttributeValue, DefaultMonoTable, DynamoDBError, DynamoDBItem, DynamoDBItemOp,
-    IntoAttributeValue, Item, ItemId,
-};
+use dynamodb_facade::{DynamoDBItemOp, Error, dynamodb_item};
 use lambda_appsync::ID;
 use rand::seq::IteratorRandom;
 use serde::{Deserialize, Serialize};
+
+use crate::dynamodb_table::{ItemType, MonoTable, PK, SK};
 
 use super::{WaitingPlace, Yak};
 
@@ -38,9 +37,9 @@ impl WaitingYak {
     pub async fn get_random_waiting(
         client: aws_sdk_dynamodb::Client,
         from_place: WaitingPlace,
-    ) -> Result<Option<Self>, DynamoDBError> {
-        let mut yaks_in_place = Self::query(client, Self::pk_condition(from_place))
-            .send()
+    ) -> Result<Option<Self>, Error> {
+        let mut yaks_in_place = Self::query(client, Self::key_condition(from_place))
+            .all()
             .await?;
 
         Ok((0..yaks_in_place.len())
@@ -59,21 +58,27 @@ impl Yak {
 
 // DynamoDB mapping: PK = "PLACE#<location>", SK = "YAK#<uuid>"
 // This enables querying all yaks at a specific place using just the PK.
-impl<'a> DynamoDBItem<'a> for WaitingYak {
-    type PkId = WaitingPlace;
-    type SkId = ID;
-    type TableDefinition = DefaultMonoTable;
-    const TYPE: &'static str = Yak::TYPE;
-
-    fn get_pk_from_id(id: Self::PkId) -> AttributeValue {
-        format!("PLACE#{id}").into_attribute_value()
-    }
-
-    fn get_sk_from_id(id: Self::SkId) -> AttributeValue {
-        format!("{}#{id}", Self::TYPE).into_attribute_value()
-    }
-
-    fn get_key(&self) -> Item {
-        Self::get_key_from_id(ItemId::pk(self.location).sk(self.yak.id))
+dynamodb_item! {
+    #[table = MonoTable]
+    WaitingYak {
+        #[sort_key]
+        SK {
+            fn attribute_id(&self) -> ID {
+                self.yak.id
+            }
+            fn attribute_value(id) -> String {
+                format!("{}#{id}", Yak::TYPE)
+            }
+        }
+        #[partition_key]
+        PK {
+            fn attribute_id(&self) -> WaitingPlace {
+                self.location
+            }
+            fn attribute_value(id) -> String {
+                format!("PLACE#{id}")
+            }
+        }
+        ItemType { const VALUE: &'static str = Yak::TYPE; }
     }
 }

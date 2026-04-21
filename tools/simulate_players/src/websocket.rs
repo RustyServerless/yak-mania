@@ -104,12 +104,12 @@ fn derive_ws_url(graphql_url: &str, api_key: &str) -> Result<Uri, WebSocketError
 
     let header_b64 = BASE64.encode(header_json.to_string().as_bytes());
 
-    Ok(Uri::builder()
+    Uri::builder()
         .scheme("wss")
         .authority(ws_host)
         .path_and_query(format!("/graphql?header={header_b64}&payload=e30="))
         .build()
-        .map_err(|e| WebSocketError::Connection(format!("uri build error: {e}")))?)
+        .map_err(|e| WebSocketError::Connection(format!("uri build error: {e}")))
 }
 
 /// Build the subscription start message.
@@ -305,7 +305,7 @@ async fn ws_connect_and_run(
     // Message loop with keep-alive monitoring
     let ka_timeout = Duration::from_millis(connection_timeout_ms);
 
-    let result = loop {
+    loop {
         tokio::select! {
             _ = shutdown_rx.recv() => {
                 for (subscription_id, _) in subscriptions.drain() {
@@ -359,9 +359,7 @@ async fn ws_connect_and_run(
                 }
             }
         }
-    };
-
-    result
+    }
 }
 
 /// Wait for the connection_ack message and return the connectionTimeoutMs value.
@@ -471,7 +469,7 @@ fn handle_ws_message(
             {
                 match handler(data) {
                     Ok(update) => {
-                        if let Err(_) = update_tx.send(update) {
+                        if update_tx.send(update).is_err() {
                             log::debug!("{bot_name} update channel closed, dropping message");
                         }
                     }

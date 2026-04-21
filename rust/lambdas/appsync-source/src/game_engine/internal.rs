@@ -1,11 +1,11 @@
 use std::ops::{Deref, Index, IndexMut, Sub};
 
 use dynamodb_facade::{
-    AttributeValue, Condition, DefaultMonoTable, DynamoDBItem, DynamoDBItemOp, IntoAttributeValue,
-    Item, ItemId, NoId, Update, UpdateSetRhs,
+    Condition, DynamoDBItemOp, Error, KeyId, Update, UpdateSetRhs, dynamodb_item,
 };
-use lambda_appsync::AppsyncError;
 use serde::{Deserialize, Serialize};
+
+use crate::dynamodb_table::{ItemType, MonoTable, PK, SK};
 
 use super::{Job, JobFees, WaitingPlace, YakCounts};
 
@@ -265,6 +265,8 @@ impl GameCounts<Theorical> {
 }
 
 impl GameCounts<Real> {
+    pub const TYPE: &'static str = "GAME_COUNTS";
+
     pub fn with_player_count(player_count: usize) -> Self {
         Self {
             yaks_with_player: Default::default(),
@@ -351,15 +353,14 @@ impl GameCounts<Real> {
     pub async fn with_updated_desired_yak_count(
         client: aws_sdk_dynamodb::Client,
         desired_yak_count: usize,
-    ) -> Result<Self, AppsyncError> {
-        Ok(Self::update_by_id(
+    ) -> Result<Self, Error> {
+        Self::update_by_id(
             client,
-            ItemId::NONE,
+            KeyId::NONE,
             Update::set("desired_yak_count", desired_yak_count),
         )
-        .condition(Self::item_exists())
-        .send()
-        .await?)
+        .exists()
+        .await
     }
 
     /// Decrease `from` by 1 and increase `to` by 1
@@ -371,21 +372,19 @@ impl GameCounts<Real> {
         client: aws_sdk_dynamodb::Client,
         from: Option<GameCountIndex>,
         to: Option<GameCountIndex>,
-    ) -> Result<Self, AppsyncError> {
+    ) -> Result<Self, Error> {
         let (update, condition) = self.create_move_yak_update_and_condition(from, to);
 
         let update = update
             .map(|u| Update::combine([u, Self::create_sampling_tracking_update()]))
             .unwrap_or_else(Self::create_sampling_tracking_update);
         let condition = condition
-            .map(|c| c & Self::item_exists())
-            .unwrap_or(Self::item_exists());
-        Ok(self
-            .update(client, update)
+            .map(|c| c & Self::exists())
+            .unwrap_or(Self::exists());
+        self.update(client, update)
             .condition(condition)
             .return_new()
-            .send()
-            .await?)
+            .await
     }
 
     fn create_sampling_tracking_update() -> Update<'static> {
@@ -439,21 +438,13 @@ impl Sub<GameCounts<Real>> for GameCounts<Theorical> {
 }
 
 // Singleton DynamoDB item: PK=SK="GAME_COUNTS" (like GameStatus, only one instance exists)
-impl<'a> DynamoDBItem<'a> for GameCounts<Real> {
-    type PkId = NoId;
-    type SkId = NoId;
-    type TableDefinition = DefaultMonoTable;
-    const TYPE: &'static str = "GAME_COUNTS";
-
-    fn get_pk_from_id(_id: Self::PkId) -> AttributeValue {
-        Self::TYPE.into_attribute_value()
-    }
-
-    fn get_sk_from_id(_id: Self::SkId) -> AttributeValue {
-        Self::TYPE.into_attribute_value()
-    }
-
-    fn get_key(&self) -> Item {
-        Self::get_key_from_id(ItemId::NONE)
+dynamodb_item! {
+    #[table = MonoTable]
+    GameCounts<Real> {
+        #[partition_key]
+        PK { const VALUE: &'static str = GameCounts::TYPE; }
+        #[sort_key]
+        SK { const VALUE: &'static str = GameCounts::TYPE; }
+        ItemType { const VALUE: &'static str = GameCounts::TYPE; }
     }
 }

@@ -1,3 +1,4 @@
+mod dynamodb_table;
 mod error_utils;
 mod game_engine;
 mod operations;

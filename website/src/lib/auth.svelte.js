@@ -32,14 +32,10 @@ export async function verify_user_signed_in() {
 		signed_user.loading = false;
 	}
 }
-
 export const check_admin_and_redirect = () => {
 	if (!signed_user.loading) {
 		if (!signed_user.id) {
-			if (typeof window !== 'undefined') {
-				window.sessionStorage.setItem('preauthpath', window.location.pathname);
-				signInWithRedirect();
-			}
+			signInWithRedirect();
 		} else if (!signed_user.is_admin) {
 			goto(resolve('/'));
 		}
@@ -47,6 +43,7 @@ export const check_admin_and_redirect = () => {
 };
 
 export async function sign_out() {
+	await goto(resolve('/'));
 	await signOut();
 }
 
@@ -54,13 +51,7 @@ if (browser) {
 	Hub.listen('auth', ({ payload }) => {
 		switch (payload.event) {
 			case 'signedIn':
-				verify_user_signed_in().then(() => {
-					const preauthpath = window.sessionStorage.getItem('preauthpath');
-					if (preauthpath) {
-						window.sessionStorage.removeItem('preauthpath');
-						goto(resolve(preauthpath));
-					}
-				});
+				verify_user_signed_in();
 				break;
 			case 'signedOut':
 				verify_user_signed_in().then(() => {

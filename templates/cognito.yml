@@ -84,18 +84,14 @@ Resources:
         IdToken: hours
         RefreshToken: days
       EnableTokenRevocation: true
-      DefaultRedirectURI: !Sub https://${WebsiteDomainName}
+      DefaultRedirectURI: !Sub https://${WebsiteDomainName}/admin
       # Both production and development URLs must be explicitly registered.
       # Cognito redirects to one of these after login/logout.
       CallbackURLs:
-        - !Sub https://${WebsiteDomainName}
-        - !Sub https://${WebsiteDomainName}/
-        - http://localhost:3000
-        - http://localhost:3000/
+        - !Sub https://${WebsiteDomainName}/admin
+        - http://localhost:3000/admin
       LogoutURLs:
-        - !Sub https://${WebsiteDomainName}
         - !Sub https://${WebsiteDomainName}/
-        - http://localhost:3000
         - http://localhost:3000/
       # SRP (Secure Remote Password): password never leaves the device.
       # REFRESH_TOKEN_AUTH allows token renewal without re-entering credentials.

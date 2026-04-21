@@ -2,11 +2,13 @@ use std::ops::{Index, IndexMut};
 
 use aws_sdk_dynamodb::types::TransactWriteItem;
 use dynamodb_facade::{
-    AttributeValue, Condition, DefaultMonoTable, DynamoDBItem, DynamoDBItemOp,
-    DynamoDBItemTransactOp, IntoAttributeValue, Item, ItemId, NoId, Update,
+    Condition, DynamoDBItemOp, DynamoDBItemTransactOp, Error, HasAttribute, HasConstAttribute,
+    KeyId, NoId, Update, dynamodb_item,
 };
 use lambda_appsync::ID;
 use serde::{Deserialize, Serialize};
+
+use crate::dynamodb_table::{ItemType, MonoTable, PK, SK};
 
 use super::{Job, JobFees, Player, PlayerAssignment, Yak};
 
@@ -35,6 +37,8 @@ impl IndexMut<Job> for Player {
 }
 
 impl Player {
+    pub const TYPE: &'static str = "PLAYER";
+
     pub fn start_new_assignment(&mut self, job: Job, yak: Yak, job_fees: JobFees) {
         let fee = job_fees[job];
         self.assignment = Some(PlayerAssignment::new(job, yak, fee));
@@ -53,17 +57,13 @@ impl Player {
     #[tracing::instrument(ret, level = "debug", skip(client))]
     pub async fn update_with_secret_check(
         client: aws_sdk_dynamodb::Client,
-        item_id: ItemId<
-            <Self as DynamoDBItem<'static>>::PkId,
-            <Self as DynamoDBItem<'static>>::SkId,
-        >,
+        key_id: KeyId<ID, NoId>,
         update: Update<'_>,
         secret: String,
-    ) -> Result<Self, aws_sdk_dynamodb::Error> {
-        Ok(Player::update_by_id(client, item_id, update)
+    ) -> Result<Self, Error> {
+        Player::update_by_id(client, key_id, update)
             .condition(Condition::eq("secret", secret))
-            .send()
-            .await?)
+            .await
     }
 
     /// Update the Job of the player
@@ -76,7 +76,7 @@ impl Player {
             self.assignment
                 .as_ref()
                 .expect("Player should have an assignment")
-                .to_item(),
+                .to_attribute_value(),
         ))
         .condition(Condition::eq("secret", secret) & Condition::not_exists("assignment"))
         .build()
@@ -106,7 +106,7 @@ impl Player {
         ]))
         .condition(
             Condition::eq("secret", secret)
-                & Condition::eq("assignment", assignment.to_item())
+                & Condition::eq("assignment", assignment.to_attribute_value())
                 & Condition::eq("balance", old_balance),
         )
         .build()
@@ -114,22 +114,49 @@ impl Player {
 }
 
 // DynamoDB mapping: PK = "PLAYER#<uuid>", SK = "PLAYER"
-impl<'a> DynamoDBItem<'a> for Player {
-    type PkId = ID;
-    type SkId = NoId;
-    type TableDefinition = DefaultMonoTable;
-    const TYPE: &'static str = "PLAYER";
 
-    fn get_pk_from_id(id: Self::PkId) -> AttributeValue {
-        format!("{}#{id}", Self::TYPE).into_attribute_value()
-    }
+// impl DynamoDBItem<MonoTable> for Player {
+//     type AdditionalAttributes = attr_list!(ItemType);
+// }
+// impl HasAttribute<PK> for Player {
+//     type Id<'id> = ID;
+//     type V = String;
+//     fn attribute_value(id: Self::Id<'_>) -> Self::V {
+//         format!("{}#{id}", Self::TYPE)
+//     }
+//     fn attribute_id(&self) -> Self::Id<'_> {
+//         self.id
+//     }
+// }
+// impl HasConstAttribute<SK> for Player {
+//     type V = &'static str;
+//     const VALUE: Self::V = Self::TYPE;
+// }
+// impl HasConstAttribute<ItemType> for Player {
+//     type V = &'static str;
+//     const VALUE: Self::V = Self::TYPE;
+// }
+dynamodb_item! {
+    #[table = MonoTable]
+    Player {
+        #[partition_key]
+        PK {
+            fn attribute_id(&self) -> ID {
+                self.id
+            }
+            fn attribute_value(id) -> String {
+                format!("{}#{id}", Self::TYPE)
+            }
+        }
 
-    fn get_sk_from_id(_id: Self::SkId) -> AttributeValue {
-        Self::TYPE.into_attribute_value()
-    }
+        #[sort_key]
+        SK {
+            const VALUE: &'static str = Self::TYPE;
+        }
 
-    fn get_key(&self) -> Item {
-        Self::get_key_from_id(ItemId::pk(self.id))
+        ItemType {
+            const VALUE: &'static str = Self::TYPE;
+        }
     }
 }
 
@@ -168,21 +195,20 @@ impl PlayerWithSecret {
     }
 }
 
-impl<'a> DynamoDBItem<'a> for PlayerWithSecret {
-    type PkId = <Player as DynamoDBItem<'a>>::PkId;
-    type SkId = <Player as DynamoDBItem<'a>>::SkId;
-    type TableDefinition = <Player as DynamoDBItem<'a>>::TableDefinition;
-    const TYPE: &'static str = Player::TYPE;
-
-    fn get_pk_from_id(id: Self::PkId) -> AttributeValue {
-        Player::get_pk_from_id(id)
-    }
-
-    fn get_sk_from_id(id: Self::SkId) -> AttributeValue {
-        Player::get_sk_from_id(id)
-    }
-
-    fn get_key(&self) -> Item {
-        self.player.get_key()
+dynamodb_item! {
+    #[table = MonoTable]
+    PlayerWithSecret {
+        #[partition_key]
+        PK {
+            fn attribute_id(&self) -> <Player as HasAttribute<PK>>::Id<'id> {
+                <Player as HasAttribute<PK>>::attribute_id(&self.player)
+            }
+            fn attribute_value(id) -> <Player as HasAttribute<PK>>::Value {
+                <Player as HasAttribute<PK>>::attribute_value(id)
+            }
+        }
+        #[sort_key]
+        SK { const VALUE: &'static str = <Player as HasConstAttribute<ItemType>>::VALUE; }
+        ItemType { const VALUE: &'static str = <Player as HasConstAttribute<ItemType>>::VALUE; }
     }
 }

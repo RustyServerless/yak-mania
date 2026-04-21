@@ -20,7 +20,6 @@ aws_lambda_events = { workspace = true}
 serde = { workspace = true }
 serde_dynamo = { workspace = true }
 
-thiserror = { workspace = true }
 tracing = { workspace = true }
 
 rand = { workspace = true }

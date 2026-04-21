@@ -57,3 +57,20 @@ macro_rules! trace_appsync_error {
         }
     };
 }
+
+pub fn facade2appsync(error: dynamodb_facade::Error) -> AppsyncError {
+    use dynamodb_facade::Error;
+    match error {
+        Error::DynamoDB(error) => (*error).into(),
+        Error::Serde(error) => AppsyncError::new("SerdeError", error.to_string()),
+        Error::Custom(s) => AppsyncError::new("CustomDynDBFacade", s),
+        Error::Other(error) => AppsyncError::new("OtherDynDBFacade", error.to_string()),
+        Error::FailedBatchWrite(write_requests) => AppsyncError::new(
+            "FailedDynamoDBBatchWrite",
+            format!(
+                "Failed to process {} batch write items",
+                write_requests.len()
+            ),
+        ),
+    }
+}

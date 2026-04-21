@@ -56,7 +56,7 @@ struct BotState {
 impl BotState {
     fn new(config: &PlayerConfig) -> Self {
         Self {
-            player_id: config.id.clone(),
+            player_id: config.id,
             secret: config.secret.clone(),
             name: config.name.clone(),
             preferred_job: config.preferred_job,
@@ -309,7 +309,7 @@ async fn execute_job_cycle(state: &mut BotState, api: &ApiCaller, name: &str, jo
                 .player
                 .as_ref()
                 .and_then(|p| p.assignment.as_ref())
-                .map(|a| a.yak.id.clone())
+                .map(|a| a.yak.id)
                 .unwrap_or_default();
             log::debug!("{name} buy {job} -> yak_id={yak_id}");
             state.apply_mutation_response(&update);
