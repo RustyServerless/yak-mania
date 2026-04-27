@@ -10,8 +10,8 @@ license = "MIT"
 
 [workspace.dependencies]
 lambda-appsync = { version = "0.10", features = ["tracing"] }
-awssdk-instrumentation = "0.1"
-dynamodb-facade = "0.1.0"
+awssdk-instrumentation = "0.2"
+dynamodb-facade = "0.1"
 
 aws-config = { version = "1", features = ["behavior-version-latest"] }
 aws-sdk-dynamodb = "1"

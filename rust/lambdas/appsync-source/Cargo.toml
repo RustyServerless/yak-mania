@@ -11,9 +11,6 @@ lambda-appsync = { workspace = true }
 awssdk-instrumentation = { workspace = true }
 dynamodb-facade = { workspace = true }
 
-aws-config = { workspace = true }
-aws-sdk-dynamodb = { workspace = true }
-
 tokio = { workspace = true}
 aws_lambda_events = { workspace = true}
 

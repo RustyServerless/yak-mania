@@ -456,7 +456,7 @@ pub async fn buy_yak(
 
     // Execute the transaction
     if let Err(e) = transaction.send().await {
-        use aws_sdk_dynamodb::operation::transact_write_items::TransactWriteItemsError;
+        use dynamodb_facade::aws_sdk_dynamodb::operation::transact_write_items::TransactWriteItemsError;
         let error = e.into_service_error();
         // If the Error is a ConditionalCheckFail for the deletion part of the Yak move
         // then it means a race condition happened between 2 players trying to buy the same yak.

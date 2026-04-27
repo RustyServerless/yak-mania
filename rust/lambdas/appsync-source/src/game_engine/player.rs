@@ -1,9 +1,8 @@
 use std::ops::{Index, IndexMut};
 
-use aws_sdk_dynamodb::types::TransactWriteItem;
 use dynamodb_facade::{
     Condition, DynamoDBItemOp, DynamoDBItemTransactOp, Error, HasAttribute, HasConstAttribute,
-    KeyId, NoId, Update, dynamodb_item,
+    KeyId, NoId, Update, aws_sdk_dynamodb::types::TransactWriteItem, dynamodb_item,
 };
 use lambda_appsync::ID;
 use serde::{Deserialize, Serialize};
@@ -56,7 +55,7 @@ impl Player {
 
     #[tracing::instrument(ret, level = "debug", skip(client))]
     pub async fn update_with_secret_check(
-        client: aws_sdk_dynamodb::Client,
+        client: dynamodb_facade::Client,
         key_id: KeyId<ID, NoId>,
         update: Update<'_>,
         secret: String,
@@ -75,8 +74,7 @@ impl Player {
             "assignment",
             self.assignment
                 .as_ref()
-                .expect("Player should have an assignment")
-                .to_attribute_value(),
+                .expect("Player should have an assignment"),
         ))
         .condition(Condition::eq("secret", secret) & Condition::not_exists("assignment"))
         .build()
@@ -106,7 +104,7 @@ impl Player {
         ]))
         .condition(
             Condition::eq("secret", secret)
-                & Condition::eq("assignment", assignment.to_attribute_value())
+                & Condition::eq("assignment", assignment)
                 & Condition::eq("balance", old_balance),
         )
         .build()

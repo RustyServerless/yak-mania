@@ -351,7 +351,7 @@ impl GameCounts<Real> {
 
     #[tracing::instrument(ret, level = "debug", skip(client))]
     pub async fn with_updated_desired_yak_count(
-        client: aws_sdk_dynamodb::Client,
+        client: dynamodb_facade::Client,
         desired_yak_count: usize,
     ) -> Result<Self, Error> {
         Self::update_by_id(
@@ -369,7 +369,7 @@ impl GameCounts<Real> {
     #[tracing::instrument(ret, level = "debug", skip(client))]
     pub async fn update_move_yak_with_sample_tracking(
         self,
-        client: aws_sdk_dynamodb::Client,
+        client: dynamodb_facade::Client,
         from: Option<GameCountIndex>,
         to: Option<GameCountIndex>,
     ) -> Result<Self, Error> {

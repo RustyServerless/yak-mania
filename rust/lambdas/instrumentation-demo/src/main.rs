@@ -7,14 +7,12 @@ use aws_lambda_events::{
     event::{sns::SnsMessage, sqs::SqsBatchResponse},
     sqs::SqsEventObj,
 };
-use aws_sdk_dynamodb::types::AttributeValue;
+use dynamodb_facade::AttributeValue;
 // awssdk-instrumentation re-exports lambda_runtime so you use the exact same version
-use awssdk_instrumentation::lambda::{OTelFaasTrigger, lambda_runtime};
+use awssdk_instrumentation::lambda::{LambdaError, LambdaEvent, OTelFaasTrigger};
 
 #[tracing::instrument(skip_all)]
-async fn handler(
-    event: lambda_runtime::LambdaEvent<serde_json::Value>,
-) -> Result<SqsBatchResponse, lambda_runtime::Error> {
+async fn handler(event: LambdaEvent<serde_json::Value>) -> Result<SqsBatchResponse, LambdaError> {
     println!("{}", event.payload.to_string());
 
     let sqs_payload: SqsEventObj<SnsMessage> =
@@ -63,5 +61,5 @@ async fn handler(
 awssdk_instrumentation::make_lambda_runtime!(
     handler,
     trigger = OTelFaasTrigger::PubSub,
-    dynamodb() -> aws_sdk_dynamodb::Client
+    dynamodb() -> dynamodb_facade::Client
 );

@@ -35,7 +35,7 @@ impl WaitingYak {
     // Queries all yaks at a given place and picks one at random.
     // This spreads player activity across yaks instead of everyone grabbing the same one.
     pub async fn get_random_waiting(
-        client: aws_sdk_dynamodb::Client,
+        client: dynamodb_facade::Client,
         from_place: WaitingPlace,
     ) -> Result<Option<Self>, Error> {
         let mut yaks_in_place = Self::query(client, Self::key_condition(from_place))

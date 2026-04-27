@@ -142,7 +142,7 @@ The key takeaway is in the Rust pair: the handler code in `no-instrumentation-de
 static AWS_SDK_CONFIG: OnceLock<::aws_config::SdkConfig> = OnceLock::new();
 fn aws_sdk_config() -> &'static ::aws_config::SdkConfig { /* ... */ }
 async fn sdk_config_init() { /* ... */ }
-fn dynamodb() -> aws_sdk_dynamodb::Client { /* ... */ }
+fn dynamodb() -> dynamodb_facade::Client { /* ... */ }
 
 #[tokio::main]
 async fn main() -> Result<(), lambda_runtime::Error> {
@@ -164,7 +164,7 @@ async fn main() -> Result<(), lambda_runtime::Error> {
 awssdk_instrumentation::make_lambda_runtime!(
     handler,
     trigger = OTelFaasTrigger::PubSub,
-    dynamodb() -> aws_sdk_dynamodb::Client
+    dynamodb() -> dynamodb_facade::Client
 );
 ```
 

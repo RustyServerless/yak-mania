@@ -1,4 +1,4 @@
-use aws_sdk_dynamodb::Client;
+use dynamodb_facade::Client;
 use dynamodb_facade::{
     AttributeValue, Condition, DynamoDBItem, DynamoDBItemOp, Error, IntoAttributeValue, Item,
     attr_list, has_attributes,

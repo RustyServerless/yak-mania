@@ -1,4 +1,4 @@
-use dynamodb_facade::AttributeValue;
+use dynamodb_facade::IntoAttributeValue;
 use lambda_appsync::ID;
 
 use super::{Job, PlayerAssignment, Yak};
@@ -14,11 +14,13 @@ impl PlayerAssignment {
         Self { job, yak, fee }
     }
 
-    pub fn to_attribute_value(&self) -> AttributeValue {
-        serde_dynamo::to_attribute_value(self).expect("is valid for serialization")
-    }
-
     pub fn yak_id(&self) -> ID {
         self.yak.id
+    }
+}
+
+impl IntoAttributeValue for &PlayerAssignment {
+    fn into_attribute_value(self) -> dynamodb_facade::AttributeValue {
+        serde_dynamo::to_attribute_value(self).expect("is valid for serialization")
     }
 }

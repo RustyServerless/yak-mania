@@ -62,7 +62,7 @@ version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -73,7 +73,7 @@ checksum = "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -86,8 +86,6 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 name = "appsync-source"
 version = "0.1.0"
 dependencies = [
- "aws-config",
- "aws-sdk-dynamodb",
  "aws_lambda_events",
  "awssdk-instrumentation",
  "dynamodb-facade",
@@ -544,10 +542,11 @@ dependencies = [
 
 [[package]]
 name = "awssdk-instrumentation"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9629ee62b836874ff42de3280c62df5531ca57ee88c44a1300fb804d0cba4abf"
+checksum = "6dc98e5a040acfc99e6d3f5da75edee446657ef8da9935d61f94577a47b29154"
 dependencies = [
+ "aws-config",
  "aws-sdk-dynamodb",
  "aws-smithy-runtime-api",
  "aws-smithy-types",
@@ -861,9 +860,9 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "dynamodb-facade"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25891333f05d3315aac1b1539e0bbb0560ab85f0d26ee60e1f5c7f766dd297eb"
+checksum = "f1a1717f444290fe81e2a30fb48d555f3a17a876d8ee157f44ff692723b530da"
 dependencies = [
  "async-stream",
  "aws-sdk-dynamodb",
@@ -918,7 +917,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1541,10 +1540,9 @@ dependencies = [
 name = "instrumentation-demo"
 version = "0.1.0"
 dependencies = [
- "aws-config",
- "aws-sdk-dynamodb",
  "aws_lambda_events",
  "awssdk-instrumentation",
+ "dynamodb-facade",
  "serde",
  "serde_json",
  "tokio",
@@ -1791,7 +1789,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -2597,7 +2595,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a766e1110788c36f4fa1c2b71b387a7815aa65f88ce0229841826633d93723e"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]

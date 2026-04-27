@@ -82,4 +82,4 @@ impl Handlers for InstrumentedHandlers {
 // - Starts the Lambda runtime
 //
 // See: https://docs.rs/awssdk-instrumentation/latest/awssdk_instrumentation/macro.make_lambda_runtime.html
-awssdk_instrumentation::make_lambda_runtime!(InstrumentedHandlers::service_fn, dynamodb() -> aws_sdk_dynamodb::Client);
+awssdk_instrumentation::make_lambda_runtime!(InstrumentedHandlers::service_fn, dynamodb() -> dynamodb_facade::Client);
