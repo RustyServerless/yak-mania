@@ -349,13 +349,9 @@ impl GameCounts<Real> {
         constraints
     }
 
-    #[tracing::instrument(ret, level = "debug", skip(client))]
-    pub async fn with_updated_desired_yak_count(
-        client: dynamodb_facade::Client,
-        desired_yak_count: usize,
-    ) -> Result<Self, Error> {
+    #[tracing::instrument(ret, level = "debug")]
+    pub async fn with_updated_desired_yak_count(desired_yak_count: usize) -> Result<Self, Error> {
         Self::update_by_id(
-            client,
             KeyId::NONE,
             Update::set("desired_yak_count", desired_yak_count),
         )
@@ -366,10 +362,9 @@ impl GameCounts<Real> {
     /// Decrease `from` by 1 and increase `to` by 1
     /// Update the GameCounts object directly and return a transaction
     /// item that will try and do the same in DynamoDB
-    #[tracing::instrument(ret, level = "debug", skip(client))]
+    #[tracing::instrument(ret, level = "debug")]
     pub async fn update_move_yak_with_sample_tracking(
         self,
-        client: dynamodb_facade::Client,
         from: Option<GameCountIndex>,
         to: Option<GameCountIndex>,
     ) -> Result<Self, Error> {
@@ -381,10 +376,7 @@ impl GameCounts<Real> {
         let condition = condition
             .map(|c| c & Self::exists())
             .unwrap_or(Self::exists());
-        self.update(client, update)
-            .condition(condition)
-            .return_new()
-            .await
+        self.update(update).condition(condition).return_new().await
     }
 
     fn create_sampling_tracking_update() -> Update<'static> {

@@ -62,7 +62,7 @@ version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
 dependencies = [
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -73,7 +73,7 @@ checksum = "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -543,8 +543,7 @@ dependencies = [
 [[package]]
 name = "awssdk-instrumentation"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6dc98e5a040acfc99e6d3f5da75edee446657ef8da9935d61f94577a47b29154"
+source = "git+https://github.com/RustyServerless/awssdk-instrumentation?branch=feat%2Fextra_init_code#f5dc147b5e91bb1e3afcf47e44a1e5e854b2aebb"
 dependencies = [
  "aws-config",
  "aws-sdk-dynamodb",
@@ -860,9 +859,9 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "dynamodb-facade"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1a1717f444290fe81e2a30fb48d555f3a17a876d8ee157f44ff692723b530da"
+checksum = "76b1c94f25ba245b6b960829c0701d3b47c52eef50061e28b2c29975baef9a77"
 dependencies = [
  "async-stream",
  "aws-sdk-dynamodb",
@@ -917,7 +916,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1623,11 +1622,13 @@ dependencies = [
 
 [[package]]
 name = "lambda-appsync"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff862cee89a574e7d89a4f2be03fdf35bd79d4a6b7641dd5b1ea0aca3eba721e"
+checksum = "77690547bff093b37994d515dda61b9afc23d5620bd3fd9e34f510ed66c14177"
 dependencies = [
+ "aws-config",
  "aws-smithy-types",
+ "env_logger",
  "lambda-appsync-proc",
  "lambda_runtime",
  "log",
@@ -1635,16 +1636,14 @@ dependencies = [
  "serde_json",
  "thiserror 1.0.69",
  "tokio",
- "tracing",
- "tracing-subscriber",
  "uuid",
 ]
 
 [[package]]
 name = "lambda-appsync-proc"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c77c4345cfef78df86bc290af208917e0e0ed95845dfbfd7df4ef48a9fc56376"
+checksum = "e521dcbfa50e5aa832c05800736f07ba4612fdf1cdc3546be4d026dfde29f301"
 dependencies = [
  "graphql-parser",
  "proc-macro2",
@@ -1789,7 +1788,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2595,7 +2594,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a766e1110788c36f4fa1c2b71b387a7815aa65f88ce0229841826633d93723e"
 dependencies = [
  "libc",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

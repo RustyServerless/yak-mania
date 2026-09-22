@@ -9,9 +9,12 @@ authors = ["Jérémie RODON <jeremie.rodon@gmail.com>"]
 license = "MIT"
 
 [workspace.dependencies]
-lambda-appsync = { version = "0.10", features = ["tracing"] }
-awssdk-instrumentation = "0.2"
-dynamodb-facade = "0.1"
+lambda-appsync = { version = "0.11.0", features = ["env_logger"] }
+dynamodb-facade = "0.2"
+
+# awssdk-instrumentation = "0.2"
+awssdk-instrumentation = { version = "0.2", git = "https://github.com/RustyServerless/awssdk-instrumentation", branch = "feat/extra_init_code" }
+# awssdk-instrumentation = { version = "0.2", path = "/home/firkraag/git/perso/awssdk-instrumentation" }
 
 aws-config = { version = "1", features = ["behavior-version-latest"] }
 aws-sdk-dynamodb = "1"

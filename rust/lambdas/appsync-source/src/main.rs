@@ -31,10 +31,10 @@ lambda_appsync::make_operation!(
 // See: https://docs.rs/lambda-appsync/latest/lambda_appsync/macro.make_handlers.html
 lambda_appsync::make_handlers!();
 
+use lambda_appsync::{AppsyncEvent, AppsyncResponse};
 // Override the default batch handler to add per-event OpenTelemetry tracing.
 // Each event in the batch is spawned as a separate async task with its own tracing span.
 struct InstrumentedHandlers;
-use lambda_appsync::{AppsyncEvent, AppsyncResponse};
 impl Handlers for InstrumentedHandlers {
     // AppSync sends batched requests (up to MaxBatchSize from the resolver config) as a Vec.
     // The handler must return responses in the same order.
@@ -82,4 +82,11 @@ impl Handlers for InstrumentedHandlers {
 // - Starts the Lambda runtime
 //
 // See: https://docs.rs/awssdk-instrumentation/latest/awssdk_instrumentation/macro.make_lambda_runtime.html
-awssdk_instrumentation::make_lambda_runtime!(InstrumentedHandlers::service_fn, dynamodb() -> dynamodb_facade::Client);
+awssdk_instrumentation::make_lambda_runtime!(
+    InstrumentedHandlers::service_fn,
+    dynamodb() -> dynamodb_facade::Client,
+    extra_init_code = {
+        // Use the instrumented client
+        dynamodb_facade::init_global_client(dynamodb());
+    }
+);

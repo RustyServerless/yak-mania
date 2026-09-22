@@ -53,14 +53,13 @@ impl Player {
         assignment.into()
     }
 
-    #[tracing::instrument(ret, level = "debug", skip(client))]
+    #[tracing::instrument(ret, level = "debug")]
     pub async fn update_with_secret_check(
-        client: dynamodb_facade::Client,
         key_id: KeyId<ID, NoId>,
         update: Update<'_>,
         secret: String,
     ) -> Result<Self, Error> {
-        Player::update_by_id(client, key_id, update)
+        Player::update_by_id(key_id, update)
             .condition(Condition::eq("secret", secret))
             .await
     }

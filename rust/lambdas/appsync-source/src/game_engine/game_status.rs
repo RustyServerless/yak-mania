@@ -1,4 +1,3 @@
-use dynamodb_facade::Client;
 use dynamodb_facade::{
     AttributeValue, Condition, DynamoDBItem, DynamoDBItemOp, Error, IntoAttributeValue, Item,
     attr_list, has_attributes,
@@ -23,7 +22,7 @@ impl GameStatus {
     /// The game status can only transition in a specific order:
     /// Reset -> Started -> Stopped -> Reset
     /// Uses DynamoDB conditional expressions to prevent invalid transitions.
-    pub async fn put_if_current_status_compatible(self, client: Client) -> Result<Self, Error> {
+    pub async fn put_if_current_status_compatible(self) -> Result<Self, Error> {
         let expected_value_condition = match self {
             // Only Stopped games can become Reset
             GameStatus::Reset => {
@@ -39,7 +38,7 @@ impl GameStatus {
                 Condition::eq(Self::PROPERTY_NAME, GameStatus::Started.to_string())
             }
         };
-        self.put(client).condition(expected_value_condition).await?;
+        self.put().condition(expected_value_condition).await?;
         Ok(self)
     }
 }
