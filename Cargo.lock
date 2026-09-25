@@ -542,8 +542,9 @@ dependencies = [
 
 [[package]]
 name = "awssdk-instrumentation"
-version = "0.2.0"
-source = "git+https://github.com/RustyServerless/awssdk-instrumentation?branch=feat%2Fextra_init_code#f5dc147b5e91bb1e3afcf47e44a1e5e854b2aebb"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce2c2b1d54f97e1a1c7e27012ce80fa1bd7292e835a5b4b4f234961273149fec"
 dependencies = [
  "aws-config",
  "aws-sdk-dynamodb",
@@ -553,7 +554,7 @@ dependencies = [
  "lambda_runtime",
  "log",
  "opentelemetry",
- "opentelemetry-aws-temporary-fork",
+ "opentelemetry-aws",
  "opentelemetry-semantic-conventions",
  "opentelemetry_sdk",
  "pin-project",
@@ -1536,19 +1537,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "instrumentation-demo"
-version = "0.1.0"
-dependencies = [
- "aws_lambda_events",
- "awssdk-instrumentation",
- "dynamodb-facade",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "ipnet"
 version = "2.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1835,9 +1823,9 @@ checksum = "7c87def4c32ab89d880effc9e097653c8da5d6ef28e6b539d313baaacfbafcbe"
 
 [[package]]
 name = "opentelemetry"
-version = "0.31.0"
+version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b84bcd6ae87133e903af7ef497404dda70c60d0ea14895fc8a5e6722754fc2a0"
+checksum = "6cdb0b1b267eb9db3331b434ed9ddab10d50e280a9adf9d13e5233e2002b61b5"
 dependencies = [
  "futures-core",
  "futures-sink",
@@ -1848,11 +1836,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "opentelemetry-aws-temporary-fork"
-version = "0.1.0"
+name = "opentelemetry-aws"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43c1810aced65a5753dcb0687aa34473d7081a0f2c4e4de1dd27374cbe81e563"
+checksum = "9b209f400fc7add8c3990203990f401a9fb0d2388b3c905609e1fab1faf875e0"
 dependencies = [
+ "http 1.4.0",
  "opentelemetry",
  "opentelemetry-semantic-conventions",
  "opentelemetry_sdk",
@@ -1860,30 +1849,43 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.18",
  "tracing",
- "url",
 ]
 
 [[package]]
 name = "opentelemetry-semantic-conventions"
-version = "0.31.0"
+version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e62e29dfe041afb8ed2a6c9737ab57db4907285d999ef8ad3a59092a36bdc846"
+checksum = "d288b1e1bc3590052fbb8f0f635ef248dd9022cf1fbaeb6582b7ad6081a17b87"
 
 [[package]]
 name = "opentelemetry_sdk"
-version = "0.31.0"
+version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e14ae4f5991976fd48df6d843de219ca6d31b01daaab2dad5af2badeded372bd"
+checksum = "cb39533d9d1c912123efd7d41d7e0c29d16917b60ce15b4c8d87cb1af7f67520"
 dependencies = [
  "futures-channel",
  "futures-executor",
  "futures-util",
  "opentelemetry",
  "percent-encoding",
+ "portable-atomic",
  "rand",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "otel-instrumentation-demo"
+version = "0.1.0"
+dependencies = [
+ "aws_lambda_events",
+ "awssdk-instrumentation",
+ "dynamodb-facade",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -2917,6 +2919,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-instrumentation-demo"
+version = "0.1.0"
+dependencies = [
+ "aws_lambda_events",
+ "awssdk-instrumentation",
+ "dynamodb-facade",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "tracing-log"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2929,9 +2944,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-opentelemetry"
-version = "0.32.1"
+version = "0.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ac28f2d093c6c477eaa76b23525478f38de514fa9aeb1285738d4b97a9552fc"
+checksum = "0a904802a1b902f43638b677ff2a650847e3b4404101b6c586d648e8c1e3e8fe"
 dependencies = [
  "js-sys",
  "opentelemetry",

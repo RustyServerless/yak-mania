@@ -1,5 +1,6 @@
 <!-- markdownlint-disable MD029 MD033 MD041 -->
 <!-- PROJECT SHIELDS -->
+
 [![License](https://img.shields.io/github/license/RustyServerless/yak-mania.svg)](https://github.com/RustyServerless/yak-mania/blob/master/LICENSE)
 
 <div align="center">
@@ -17,7 +18,7 @@
 
 This project is a reference architecture that demonstrates:
 
-- **[`awssdk-instrumentation`](https://github.com/RustyServerless/awssdk-instrumentation)** — Out-of-the-box OpenTelemetry/X-Ray instrumentation for the AWS SDK for Rust, with first-class Lambda support. Used in the main AppSync Lambda and showcased in a dedicated [tracing comparison demo](#tracing-demo).
+- **[`awssdk-instrumentation`](https://github.com/RustyServerless/awssdk-instrumentation)** — Out-of-the-box OpenTelemetry/X-Ray instrumentation for the AWS SDK for Rust, with first-class Lambda support and two interchangeable backends: a `tracing` bridge (default) and native OpenTelemetry (`otel-backend` feature). Used in the main AppSync Lambda and showcased in a dedicated [tracing comparison demo](#tracing-demo).
 - **[`lambda-appsync`](https://github.com/RustyServerless/lambda-appsync)** — A type-safe framework that reads a GraphQL schema at compile time and generates operation routing, type definitions, and Lambda handler boilerplate. Used in the main AppSync Lambda.
 - **Rust on AWS Lambda** — Compiled Rust binaries running on ARM64 (Graviton2) custom runtimes (`provided.al2023`), demonstrating performance and cost advantages.
 - **AWS CI/CD** — A complete CodePipeline deploying infrastructure and a static website from a GitHub repo, with incremental Rust build caching.
@@ -72,16 +73,16 @@ Core Components:
 
 ### Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | SvelteKit static site (Svelte 5 + TailwindCSS v4 + DaisyUI v5), served via CloudFront + S3 |
-| Auth | Cognito User Pools (admin JWT) + AppSync API Key (players) |
-| API | AWS AppSync (GraphQL), Direct Lambda Resolver with batching |
+| Layer          | Technology                                                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Frontend       | SvelteKit static site (Svelte 5 + TailwindCSS v4 + DaisyUI v5), served via CloudFront + S3                        |
+| Auth           | Cognito User Pools (admin JWT) + AppSync API Key (players)                                                        |
+| API            | AWS AppSync (GraphQL), Direct Lambda Resolver with batching                                                       |
 | Backend Lambda | Rust on ARM64, using [`lambda-appsync`](https://github.com/RustyServerless/lambda-appsync) for type-safe dispatch |
-| Database | DynamoDB single-table design |
-| Observability | X-Ray + OpenTelemetry via [`awssdk-instrumentation`](https://github.com/RustyServerless/awssdk-instrumentation) |
-| CI/CD | CodePipeline V2 → CodeBuild (ARM64) → CloudFormation (SAM) |
-| IaC | CloudFormation with SAM transform + `AWS::LanguageExtensions` (`Fn::ForEach`) |
+| Database       | DynamoDB single-table design                                                                                      |
+| Observability  | X-Ray + OpenTelemetry via [`awssdk-instrumentation`](https://github.com/RustyServerless/awssdk-instrumentation)   |
+| CI/CD          | CodePipeline V2 → CodeBuild (ARM64) → CloudFormation (SAM)                                                        |
+| IaC            | CloudFormation with SAM transform + `AWS::LanguageExtensions` (`Fn::ForEach`)                                     |
 
 ### Repository Structure
 
@@ -92,17 +93,17 @@ templates/
   graphqlapi.yml               # AppSync API, Rust Lambda, DynamoDB, resolvers, X-Ray
   cognito.yml                  # Cognito User Pool, OAuth client, admin group
   static-website.yml           # S3 + CloudFront + security headers + cleanup Lambda
-  tracing-demo.yml             # 6-path tracing comparison (4 Python + 2 Rust)
+  tracing-demo.yml             # 7-path tracing comparison (4 Python + 3 Rust)
 graphql/
   schema.gql                   # GraphQL schema (read at compile time by lambda-appsync)
 rust/lambdas/
   appsync-source/              # Main Lambda: all AppSync resolvers
   no-instrumentation-demo/     # Baseline Rust Lambda (manual boilerplate, no OTel)
-  instrumentation-demo/        # Same handler + make_lambda_runtime! (replaces ~30 lines)
+  tracing-instrumentation-demo/ # Same handler + make_lambda_runtime! (tracing backend)
+  otel-instrumentation-demo/   # Same handler + make_lambda_runtime! (OTel backend)
 python/lambdas/
-  no-instrumentation-demo/     # Python baseline (no instrumentation)
+  instrumentation-demo/        # Python handler shared by paths 0, 2 and 3 (no in-code tracing)
   xray-sdk-demo/               # Python + classic aws-xray-sdk patching
-  adot-demo/                   # Python + ADOT (OTel collector)
   cleanup-s3/                  # S3 bucket emptier for stack cleanup
 ci-config/
   buildspec.yml                # Rust incremental build with dependency-aware cache cleaning
@@ -116,26 +117,28 @@ local_testing/                 # Local integration test stack (DynamoDB Local + 
 
 ## Tracing Demo
 
-
 <div align="center">
     <img src="images/demo-tracing-overview.drawio.png" alt="Tracing Architecture" style="max-width: 800px">
     <p><i>This PNG can be edited using <a href="https://draw.io">Draw.io</a></i></p>
 </div>
 
-A dedicated sub-stack (`templates/tracing-demo.yml`) deploys a side-by-side comparison of 6 different Lambda instrumentation approaches. An SNS topic fans out to 6 SQS queues, each triggering a Lambda with a different tracing strategy:
+A dedicated sub-stack (`templates/tracing-demo.yml`) deploys a side-by-side comparison of 7 different Lambda instrumentation approaches. An SNS topic fans out to 7 SQS queues, each triggering a Lambda with a different tracing strategy:
 
-| # | Runtime | Instrumentation | Description |
-|---|---------|-----------------|-------------|
-| 0 | Python | None | Baseline — no tracing overhead |
-| 1 | Python | X-Ray SDK | Classic `aws-xray-sdk` patching + X-Ray daemon |
-| 2 | Python | ADOT v1 | OTel patching + OTel collector sidecar layer |
-| 3 | Python | ADOT v2 | In-code X-Ray segment translation + X-Ray daemon |
-| 4 | Rust | None | Baseline — manual boilerplate (~96 lines) |
-| 5 | Rust | `awssdk-instrumentation` | tracing instrumentation + OTel + X-Ray daemon |
+| #   | Runtime | Instrumentation                            | Description                                         |
+| --- | ------- | ------------------------------------------ | --------------------------------------------------- |
+| 0   | Python  | None                                       | Baseline — no tracing overhead                      |
+| 1   | Python  | X-Ray SDK                                  | Classic `aws-xray-sdk` patching + X-Ray daemon      |
+| 2   | Python  | ADOT v1                                    | OTel patching + OTel collector sidecar layer        |
+| 3   | Python  | ADOT v2                                    | In-code X-Ray segment translation + X-Ray daemon    |
+| 4   | Rust    | None                                       | Baseline — manual boilerplate (~96 lines)           |
+| 5   | Rust    | `awssdk-instrumentation` (tracing backend) | OTel spans bridged to `tracing` + X-Ray daemon      |
+| 6   | Rust    | `awssdk-instrumentation` (OTel backend)    | Native OTel API, no `tracing` bridge + X-Ray daemon |
+
+Only the Python path 1 needs its own code: it calls `patch_all()` from `aws_xray_sdk`. Paths 0, 2 and 3 share the same plain handler, since their instrumentation comes entirely from Lambda layers or the `otel-instrument` exec wrapper.
 
 Each Lambda writes to the same DynamoDB table to prove it processed the message. The comparison highlights cold start overhead and trace quality across approaches.
 
-The key takeaway is in the Rust pair: the handler code in `no-instrumentation-demo` and `instrumentation-demo` is **identical** — instrumentation is completely transparent to business logic. The only difference is that `make_lambda_runtime!` replaces ~30 lines of manual boilerplate (tracing subscriber, SDK config, client initialization, Lambda runtime setup) with a single macro invocation:
+The key takeaway is in the two Rust pairs (4↔5 and 4↔6): the business logic in `no-instrumentation-demo`, `tracing-instrumentation-demo` and `otel-instrumentation-demo` is the same — instrumentation is transparent to it. `make_lambda_runtime!` replaces ~30 lines of manual boilerplate (tracing subscriber, SDK config, client initialization, Lambda runtime setup) with a single macro invocation:
 
 ```rust
 // no-instrumentation-demo: ~30 lines of manual setup
@@ -159,14 +162,33 @@ async fn main() -> Result<(), lambda_runtime::Error> {
 }
 ```
 
+The two instrumented variants then differ only in the tail of the file, where the backend and its interceptor are selected:
+
 ```rust
-// instrumentation-demo: one macro replaces all of the above
+// tracing-instrumentation-demo: tracing backend, spans are written with #[tracing::instrument]
 awssdk_instrumentation::make_lambda_runtime!(
     handler,
+    lambda_layer_instrumentor = TracingInstrumentor,
     trigger = OTelFaasTrigger::PubSub,
-    dynamodb() -> dynamodb_facade::Client
+    dynamodb() -> dynamodb_facade::Client,
+    sdk_client_interceptor = TracingInterceptor::new()
 );
 ```
+
+```rust
+// otel-instrumentation-demo: native OTel backend, spans are created with the OTel API.
+// The telemetry setup is not generated, so it is written explicitly here.
+awssdk_instrumentation::make_lambda_runtime!(
+    handler,
+    telemetry_init = otel_only_telemetry_init,
+    lambda_layer_instrumentor = OtelInstrumentor,
+    trigger = OTelFaasTrigger::PubSub,
+    dynamodb() -> dynamodb_facade::Client,
+    sdk_client_interceptor = OtelInterceptor::new()
+);
+```
+
+`OTelFaasTrigger::PubSub` sets the `faas.trigger` OTel attribute, since these Lambdas are triggered by SNS/SQS rather than HTTP.
 
 To trigger the demo, publish a message to the SNS topic using the provided script:
 
@@ -175,7 +197,7 @@ To trigger the demo, publish a message to the SNS topic using the provided scrip
 python tools/publish_tracing_demo.py <topic_arn>
 ```
 
-Then inspect the resulting traces in the X-Ray console to compare cold start overhead, trace depth, and annotation quality across all 6 approaches.
+Then inspect the resulting traces in the X-Ray console to compare cold start overhead, trace depth, and annotation quality across all 7 approaches.
 
 ## Getting Started
 
@@ -233,7 +255,7 @@ The simplest technique is to copy it from the browser URL:
 
 #### Important
 
-In the following instructions, there is an *implicit* instruction to **always ensure your AWS Console
+In the following instructions, there is an _implicit_ instruction to **always ensure your AWS Console
 is set on the AWS Region you intend to use**. You can use any region you like, just stick to it.
 
 #### 2. Create a CodeStar connection to your GitHub account
@@ -265,7 +287,7 @@ from the link or from your newly forked repository if you prefer.
 
 ![Step 5](images/get-started-5.png)
 
-6. Ensure *Template is ready* is selected and *Upload a template file*, then specify the `ci-template.yml` template that you just downloaded.
+6. Ensure _Template is ready_ is selected and _Upload a template file_, then specify the `ci-template.yml` template that you just downloaded.
 
 ![Step 6](images/get-started-6.png)
 
@@ -273,9 +295,9 @@ from the link or from your newly forked repository if you prefer.
 
 ![Step 7](images/get-started-7.png)
 
-8. Skip the *Configure stack options*, leaving everything unchanged
+8. Skip the _Configure stack options_, leaving everything unchanged
 
-9. At the *Review and create* stage, acknowledge that CloudFormation will create roles and Submit.
+9. At the _Review and create_ stage, acknowledge that CloudFormation will create roles and Submit.
 
 ![Step 8](images/get-started-8.png)
 
@@ -387,7 +409,7 @@ Monitor performance through multiple tools:
 
 ### Requirements
 
-- Rust 1.85+ with `cargo-lambda`
+- Rust 1.92+ with `cargo-lambda`
 - Node.js 24+
 - Python 3.12+
 - Java 21+ JRE for DynamoDB Local
@@ -397,7 +419,7 @@ All tools are provided by the Nix flake (`nix/flake.nix`). If you're not using N
 ```bash
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-rustup default 1.85
+rustup default stable
 # Install cargo-lambda to be able to run lambda locally
 cargo install cargo-lambda
 

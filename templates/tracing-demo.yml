@@ -303,31 +303,58 @@ Resources:
       Endpoint: !GetAtt RustNoInstrumentQueue.Arn
       RawMessageDelivery: false
 
-  RustInstrumentQueue:
+  RustTracingInstrumentQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Sub ${ProjectName}-tracing-demo-rust-instrument
-  RustInstrumentQueuePolicy:
+      QueueName: !Sub ${ProjectName}-tracing-demo-rust-tracing
+  RustTracingInstrumentQueuePolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
       Queues:
-        - !Ref RustInstrumentQueue
+        - !Ref RustTracingInstrumentQueue
       PolicyDocument:
         Statement:
           - Effect: Allow
             Principal:
               Service: sns.amazonaws.com
             Action: sqs:SendMessage
-            Resource: !GetAtt RustInstrumentQueue.Arn
+            Resource: !GetAtt RustTracingInstrumentQueue.Arn
             Condition:
               ArnEquals:
                 aws:SourceArn: !Ref DemoTopic
-  RustInstrumentSubscription:
+  RustTracingInstrumentSubscription:
     Type: AWS::SNS::Subscription
     Properties:
       TopicArn: !Ref DemoTopic
       Protocol: sqs
-      Endpoint: !GetAtt RustInstrumentQueue.Arn
+      Endpoint: !GetAtt RustTracingInstrumentQueue.Arn
+      RawMessageDelivery: false
+
+  RustOtelInstrumentQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${ProjectName}-tracing-demo-rust-otel
+  RustOtelInstrumentQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref RustOtelInstrumentQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt RustOtelInstrumentQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref DemoTopic
+  RustOtelInstrumentSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref DemoTopic
+      Protocol: sqs
+      Endpoint: !GetAtt RustOtelInstrumentQueue.Arn
       RawMessageDelivery: false
 
   ####################
@@ -341,7 +368,7 @@ Resources:
       FunctionName: !Sub ${ProjectName}-tracing-demo-python-no-instrument
       Runtime: python3.13
       Handler: index.handler
-      CodeUri: ../python/lambdas/no-instrumentation-demo
+      CodeUri: ../python/lambdas/instrumentation-demo
       Environment:
         Variables:
           LAMBDA_NAME: python-no-instrument
@@ -399,7 +426,7 @@ Resources:
       FunctionName: !Sub ${ProjectName}-tracing-demo-python-adot-v1
       Runtime: python3.13
       Handler: index.handler
-      CodeUri: ../python/lambdas/adot-demo
+      CodeUri: ../python/lambdas/instrumentation-demo
       # AWS-published ADOT v1 layer ARN. 901920570463 is the official AWS Lambda Layers publisher account.
       # The layer includes the OTel collector sidecar.
       Layers:
@@ -435,7 +462,7 @@ Resources:
       FunctionName: !Sub ${ProjectName}-tracing-demo-python-adot-v2
       Runtime: python3.13
       Handler: index.handler
-      CodeUri: ../python/lambdas/adot-demo
+      CodeUri: ../python/lambdas/instrumentation-demo
       # Looks up the region-specific ADOT v2 layer ARN from the Mappings section
       Layers:
         - !FindInMap [AdotNewLayer, !Ref "AWS::Region", Arn]
@@ -497,25 +524,25 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${RustNoInstrumentFunction}
       RetentionInDays: 90
 
-  # Path 5: Rust with the `awssdk-instrumentation` crate — OTel + X-Ray tracing for Rust.
+  # Path 5: Rust with the `awssdk-instrumentation` crate — Tracing/OTel + X-Ray tracing for Rust.
   # Compare this with Path 4 to see what instrumentation adds (both in traces and in cold start overhead).
-  RustInstrumentFunction:
+  RustTracingInstrumentFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${ProjectName}-tracing-demo-rust-instrument
+      FunctionName: !Sub ${ProjectName}-tracing-demo-rust-tracing
       Runtime: provided.al2023
       Handler: rust.handler
-      CodeUri: ../rust/lambdas/instrumentation-demo
+      CodeUri: ../rust/lambdas/tracing-instrumentation-demo
       Environment:
         Variables:
-          LAMBDA_NAME: rust-instrument
+          LAMBDA_NAME: rust-tracing-instrument
           # Enable debug logging for awssdk-instrumentation to see its internal OTel operations
-          RUST_LOG: info,awssdk_instrumentation=debug
+          RUST_LOG: debug,hyper=info,h2=info,tracing=info,aws_config=info,aws_smithy_runtime=info,aws_smithy_runtime_api=info,rustls=info
       Events:
         SqsTrigger:
           Type: SQS
           Properties:
-            Queue: !GetAtt RustInstrumentQueue.Arn
+            Queue: !GetAtt RustTracingInstrumentQueue.Arn
             BatchSize: 1
       Policies:
         - Version: 2012-10-17
@@ -523,10 +550,42 @@ Resources:
             - Effect: Allow
               Action: dynamodb:PutItem
               Resource: !GetAtt DemoTable.Arn
-  RustInstrumentFunctionLogGroup:
+  RustTracingInstrumentFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${RustInstrumentFunction}
+      LogGroupName: !Sub /aws/lambda/${RustTracingInstrumentFunction}
+      RetentionInDays: 90
+
+  # Path 6: Rust with the `awssdk-instrumentation` crate — Pure OTel + X-Ray tracing for Rust.
+  # Compare this with Path 4 to see what instrumentation adds (both in traces and in cold start overhead).
+  RustOtelInstrumentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-tracing-demo-rust-otel
+      Runtime: provided.al2023
+      Handler: rust.handler
+      CodeUri: ../rust/lambdas/otel-instrumentation-demo
+      Environment:
+        Variables:
+          LAMBDA_NAME: rust-otel-instrument
+          # Enable debug logging for awssdk-instrumentation to see its internal OTel operations
+          RUST_LOG: debug,hyper=info,h2=info,tracing=info,aws_config=info,aws_smithy_runtime=info,aws_smithy_runtime_api=info,rustls=info
+      Events:
+        SqsTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt RustOtelInstrumentQueue.Arn
+            BatchSize: 1
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: dynamodb:PutItem
+              Resource: !GetAtt DemoTable.Arn
+  RustOtelInstrumentFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${RustOtelInstrumentFunction}
       RetentionInDays: 90
 
 Outputs:

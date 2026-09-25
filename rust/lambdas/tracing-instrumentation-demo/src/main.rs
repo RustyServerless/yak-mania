@@ -1,4 +1,4 @@
-// This Lambda is instrumented with `awssdk-instrumentation`.
+// This Lambda is instrumented with `awssdk-instrumentation(tracing)`.
 // The handler code is IDENTICAL to no-instrumentation-demo — instrumentation is transparent.
 // The only difference is the bottom of the file: `make_lambda_runtime!` replaces ~30 lines
 // of manual boilerplate (tracing subscriber, SDK config, client init, Lambda runtime setup).
@@ -9,7 +9,7 @@ use aws_lambda_events::{
 };
 use dynamodb_facade::AttributeValue;
 // awssdk-instrumentation re-exports lambda_runtime so you use the exact same version
-use awssdk_instrumentation::lambda::{LambdaError, LambdaEvent, OTelFaasTrigger};
+use awssdk_instrumentation::lambda::{LambdaError, LambdaEvent};
 
 #[tracing::instrument(skip_all)]
 async fn handler(event: LambdaEvent<serde_json::Value>) -> Result<SqsBatchResponse, LambdaError> {
@@ -58,8 +58,14 @@ async fn handler(event: LambdaEvent<serde_json::Value>) -> Result<SqsBatchRespon
 //   is triggered by SNS/SQS, not HTTP)
 //
 // See: https://docs.rs/awssdk-instrumentation/latest/awssdk_instrumentation/macro.make_lambda_runtime.html
+use awssdk_instrumentation::{
+    interceptor::tracing::TracingInterceptor,
+    lambda::{OTelFaasTrigger, layer::TracingInstrumentor},
+};
 awssdk_instrumentation::make_lambda_runtime!(
     handler,
+    lambda_layer_instrumentor = TracingInstrumentor,
     trigger = OTelFaasTrigger::PubSub,
-    dynamodb() -> dynamodb_facade::Client
+    dynamodb() -> dynamodb_facade::Client,
+    sdk_client_interceptor = TracingInterceptor::new()
 );
