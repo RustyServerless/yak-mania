@@ -89,6 +89,8 @@ async fn main() -> Result<(), lambda_runtime::Error> {
         .init();
 
     sdk_config_init().await;
+    // Init the client
+    let _ = dynamodb();
 
     lambda_runtime::Runtime::new(lambda_runtime::service_fn(handler))
         .run()
