@@ -59,19 +59,10 @@ static AWS_SDK_CONFIG: OnceLock<::aws_config::SdkConfig> = OnceLock::new();
 fn aws_sdk_config() -> &'static ::aws_config::SdkConfig {
     AWS_SDK_CONFIG.get().unwrap()
 }
-
 async fn sdk_config_init() {
-    use aws_smithy_http_client::{Builder, tls};
-    let http_client = Builder::new()
-        .tls_provider(tls::Provider::Rustls(
-            tls::rustls_provider::CryptoMode::Ring,
-        ))
-        .build_https();
-    let config = aws_config::defaults(aws_config::BehaviorVersion::latest())
-        .http_client(http_client)
-        .load()
-        .await;
-    AWS_SDK_CONFIG.set(config).unwrap();
+    AWS_SDK_CONFIG
+        .set(aws_config::load_from_env().await)
+        .unwrap();
 }
 
 // Plain DynamoDB client — no OTel interceptor, so DynamoDB calls won't appear in X-Ray traces.
@@ -98,8 +89,9 @@ async fn main() -> Result<(), lambda_runtime::Error> {
         .init();
 
     sdk_config_init().await;
-    // Init the client
-    let _ = dynamodb();
+
+    // Init the PRNG
+    let _ = aws_lc_rs::rand::fill(&mut [0u8; 32]);
 
     lambda_runtime::Runtime::new(lambda_runtime::service_fn(handler))
         .run()
