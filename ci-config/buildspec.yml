@@ -1,5 +1,9 @@
 version: 0.2
 
+env:
+  variables:
+    AWS_LC_SYS_NO_JITTER_ENTROPY: "1"
+
 phases:
   install:
     runtime-versions:

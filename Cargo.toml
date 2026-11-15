@@ -28,5 +28,3 @@ tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
 
 rand = "0.9"
-
-aws-lc-rs = "1"
