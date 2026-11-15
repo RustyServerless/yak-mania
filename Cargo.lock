@@ -1761,6 +1761,7 @@ version = "0.1.0"
 dependencies = [
  "aws-config",
  "aws-sdk-dynamodb",
+ "aws-smithy-http-client",
  "aws_lambda_events",
  "lambda_runtime",
  "serde",
