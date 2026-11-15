@@ -15,6 +15,7 @@ dynamodb-facade = "0.2"
 awssdk-instrumentation = { version = "0.4", features = ["otel-backend"] }
 
 aws-config = { version = "1", features = ["behavior-version-latest"] }
+aws-lc-rs = "1"
 aws-sdk-dynamodb = "1"
 serde_dynamo = { version = "4", features = ["aws-sdk-dynamodb+1"] }
 

@@ -12,6 +12,7 @@ aws-sdk-dynamodb = { workspace = true }
 
 tokio = { workspace = true }
 lambda_runtime = { workspace = true }
+aws-lc-rs = { workspace = true }
 aws_lambda_events = { workspace = true }
 
 serde = { workspace = true }

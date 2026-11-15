@@ -67,5 +67,9 @@ awssdk_instrumentation::make_lambda_runtime!(
     lambda_layer_instrumentor = TracingInstrumentor,
     trigger = OTelFaasTrigger::PubSub,
     dynamodb() -> dynamodb_facade::Client,
-    sdk_client_interceptor = TracingInterceptor::new()
+    sdk_client_interceptor = TracingInterceptor::new(),
+    extra_init_code = {
+        // Init the PRNG
+        let _ = aws_lc_rs::rand::fill(&mut [0u8; 32]);
+    }
 );

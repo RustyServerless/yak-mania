@@ -96,5 +96,9 @@ awssdk_instrumentation::make_lambda_runtime!(
     lambda_layer_instrumentor = OtelInstrumentor,
     trigger = OTelFaasTrigger::PubSub,
     dynamodb() -> dynamodb_facade::Client,
-    sdk_client_interceptor = OtelInterceptor::new()
+    sdk_client_interceptor = OtelInterceptor::new(),
+    extra_init_code = {
+        // Init the PRNG
+        let _ = aws_lc_rs::rand::fill(&mut [0u8; 32]);
+    }
 );

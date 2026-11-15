@@ -91,6 +91,8 @@ async fn main() -> Result<(), lambda_runtime::Error> {
     sdk_config_init().await;
     // Init the client
     let _ = dynamodb();
+    // Init the PRNG
+    let _ = aws_lc_rs::rand::fill(&mut [0u8; 32]);
 
     lambda_runtime::Runtime::new(lambda_runtime::service_fn(handler))
         .run()
